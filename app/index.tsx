@@ -1,15 +1,16 @@
+import { useLoading } from '@/contexts/loadingContext';
 import { useProcessTransactionMutation } from '@/store/api/transactionApi';
 import { setTransferDetails } from '@/store/transferSlice';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
@@ -17,6 +18,7 @@ import { COLORS, FONT_SIZE, SPACING } from '../constants/theme';
 
 export default function Transfer() {
   const router = useRouter();
+  const { showLoading, hideLoading } = useLoading();
   const dispatch = useDispatch();
   const [processTransaction] = useProcessTransactionMutation();
   const [accountNumber, setAccountNumber] = useState('');
@@ -74,6 +76,7 @@ export default function Transfer() {
     if (accError || amtError) return;
 
     try {
+      showLoading();
       const res = await processTransaction({ amount: parseFloat(amount), accountNumber }).unwrap();
       const generatedRefId = `REF${Date.now()}`;
       dispatch(setTransferDetails({
@@ -87,6 +90,8 @@ export default function Transfer() {
       router.replace('/payment-success');
     } catch (apiError: any) {
       router.replace({ pathname: '/payment-failed', params: { message: apiError?.data?.message || '' } });
+    } finally {
+      hideLoading();
     }
   };
 
