@@ -1,0 +1,12 @@
+{
+    "success": {
+      "status": "success",
+      "referenceId": "REF1234567890",
+      "message": "Transfer completed successfully"
+    },
+    "error": {
+      "status": "error",
+      "message": "Insufficient funds"
+    }
+  }
+  
