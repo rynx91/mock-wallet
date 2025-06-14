@@ -43,7 +43,7 @@ export default function Login() {
       const response = await login({ phone, pin }).unwrap();
       await AsyncStorage.setItem('authToken', response.token);
       await AsyncStorage.setItem('userPhone', phone);
-      router.replace('/transfer');
+      router.replace('/home');
     } catch (e: any) {
       Alert.alert('Login Failed', e?.data?.message || 'Invalid login.');
     } finally {
