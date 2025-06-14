@@ -1,260 +1,215 @@
-import HeaderBackButton from '@/components/HeaderBackButton';
 import { useLoading } from '@/contexts/loadingContext';
-import { useProcessTransactionMutation } from '@/store/api/transactionApi';
-import { setTransferDetails } from '@/store/transferSlice';
-import * as LocalAuthentication from 'expo-local-authentication';
+
+import { useLoginMutation } from '@/store/api/authApi';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useDispatch } from 'react-redux';
 import { COLORS, FONT_SIZE, SPACING } from '../constants/theme';
 
-export default function Transfer() {
+export default function Login() {
   const router = useRouter();
-  const dispatch = useDispatch();
   const { showLoading, hideLoading } = useLoading();
-  const [processTransaction] = useProcessTransactionMutation();
-  const [accountNumber, setAccountNumber] = useState('');
-  const [amount, setAmount] = useState('');
-  const [note, setNote] = useState('');
-  const [balance] = useState(1000);
+  const [phone, setPhone] = useState('');
+  const [pin, setPin] = useState('');
+  const [phoneError, setPhoneError] = useState('');
 
-  const [accountNumberError, setAccountNumberError] = useState('');
-  const [amountError, setAmountError] = useState('');
+  const [login, { isLoading }] = useLoginMutation();
 
-  const [hasTouchedAccountNumber, setHasTouchedAccountNumber] = useState(false);
-  const [hasTouchedAmount, setHasTouchedAmount] = useState(false);
-  const [rawAmount, setRawAmount] = useState('');
-
-  useEffect(() => {
-    const formatted = formatAmount(rawAmount);
-    setAmount(formatted);
-    setAccountNumberError(validateAccountNumber(accountNumber));
-    setAmountError(validateAmount(formatted));
-  }, [accountNumber, rawAmount]);
-
-  const validateAccountNumber = (value: string) => {
-    if (!value) return 'Account number is required.';
-    if (value.length !== 12) return 'Account number must be exactly 12 digits.';
+  const validatePhone = (value: string) => {
+    if (!value) return 'Phone number is required.';
+    if (!/^\d{9,10}$/.test(value)) return 'Invalid Malaysian phone number.';
     return '';
   };
 
-  const validateAmount = (value: string) => {
-    const number = parseFloat(value);
-    if (!value) return 'Amount is required.';
-    if (isNaN(number) || number <= 0) return 'Amount must be greater than 0.';
-    if (number > balance) return 'Amount exceeds available balance.';
-    return '';
-  };
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  useEffect(() => {
-    setAccountNumberError(validateAccountNumber(accountNumber));
-    setAmountError(validateAmount(amount));
-  }, [accountNumber, amount]);
+  const handleLogin = async () => {
+    const error = validatePhone(phone);
+    setPhoneError(error);
+    if (error) return;
 
-  const formatAmount = (val: string) => {
-    const number = parseInt(val || '0', 10);
-    return (number / 100).toFixed(2);
-  };
-
-  const handleTransfer = async () => {
-    const accError = validateAccountNumber(accountNumber);
-    const amtError = validateAmount(amount);
-  
-    setAccountNumberError(accError);
-    setAmountError(amtError);
-    setHasTouchedAccountNumber(true);
-    setHasTouchedAmount(true);
-  
-    if (accError || amtError) return;
-  
-    showLoading();
-  
     try {
-      const isAvailable = await LocalAuthentication.hasHardwareAsync();
-      const supportedTypes = await LocalAuthentication.supportedAuthenticationTypesAsync();
-  
-      if (!isAvailable || supportedTypes.length === 0) {
-        Alert.alert('Biometric not available', 'This device does not support Face ID or fingerprint.');
-        return;
-      }
-  
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Authenticate to complete transfer',
-        fallbackLabel: 'Use Passcode',
-        cancelLabel: 'Cancel',
-        disableDeviceFallback: false,
-      });
-
-      if (result.success) {
-        const generatedRefId = `REF${Date.now()}`;
-        try {
-          const res = await processTransaction({ amount: parseFloat(amount), accountNumber }).unwrap();
-      
-          dispatch(setTransferDetails({
-            referenceId: generatedRefId,
-            accountNumber,
-            amount,
-            note,
-            dateTime: new Date().toLocaleString(),
-          }));
-      
-          router.replace('/payment-success');
-        } catch (apiError: any) {
-          router.replace({ pathname: '/payment-failed', params: { message: apiError?.data?.message || '' } });
-        }
-      }
+      showLoading();
+      await sleep(1000);
+      const response = await login({ phone, pin }).unwrap();
+      await AsyncStorage.setItem('authToken', response.token);
+      await AsyncStorage.setItem('userPhone', phone);
+      router.replace('/transfer');
+    } catch (e: any) {
+      Alert.alert('Login Failed', e?.data?.message || 'Invalid login.');
     } finally {
       hideLoading();
     }
   };
 
-  const isFormValid =
-    !validateAccountNumber(accountNumber) && !validateAmount(amount);
+  const isFormValid = validatePhone(phone) === '' && pin.length === 6;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    <View style={styles.container}>
+      {/* Brand Logo */}
+      <View style={styles.logoContainer}>
+        <View style={styles.logoCircle}>
+          <Text style={styles.logoText}>R</Text>
+        </View>
+        <Text style={styles.logoLabel}>-bank</Text>
+      </View>
+
+      <Text style={styles.title}>Login</Text>
+
+      <Text style={styles.label}>Phone Number</Text>
+      <View style={styles.phoneContainer}>
+        <View style={styles.countryCode}>
+          <Text style={styles.countryCodeText}>+60</Text>
+        </View>
+        <TextInput
+          style={styles.phoneInput}
+          keyboardType="numeric"
+          placeholder="Enter phone number"
+          value={phone}
+          onChangeText={(text) => {
+            setPhone(text.replace(/\D/g, ''));
+            setPhoneError('');
+          }}
+          maxLength={10}
+        />
+      </View>
+      {phoneError ? <Text style={styles.error}>{phoneError}</Text> : null}
+
+      <Text style={styles.label}>PIN</Text>
+      <TextInput
+        style={styles.input}
+        keyboardType="numeric"
+        placeholder="Enter 6-digit PIN"
+        value={pin}
+        onChangeText={setPin}
+        maxLength={6}
+        secureTextEntry
+        placeholderTextColor="rgba(255, 255, 255, 0.6)"
+      />
+
+      <TouchableOpacity
+        onPress={handleLogin}
+        disabled={!isFormValid || isLoading}
+        style={[
+          styles.buttonSecondary,
+          { opacity: !isFormValid || isLoading ? 0.6 : 1 },
+        ]}
       >
-        <View style={styles.container}>
-          <HeaderBackButton />
-          {/* Title Header */}
-          <Text style={styles.screenTitle}>Payment Transfer</Text>
-
-          {/* Account Number */}
-          <Text style={styles.label}>Account Number</Text>
-          <TextInput
-            style={[styles.input, styles.inputBold]}
-            value={accountNumber}
-            onChangeText={(text) => {
-              if (/^\d*$/.test(text)) setAccountNumber(text);
-            }}
-            onFocus={() => setHasTouchedAccountNumber(true)}
-            placeholder="Enter account number"
-            placeholderTextColor="#999"
-            keyboardType="numeric"
-            maxLength={12}
-          />
-          {hasTouchedAccountNumber && accountNumberError ? (
-            <Text style={styles.error}>{accountNumberError}</Text>
-          ) : null}
-
-          {/* Amount */}
-          <Text style={styles.label}>Amount</Text>
-          <TextInput
-            style={[styles.input, styles.inputBold]}
-            value={formatAmount(rawAmount)}
-            onChangeText={(text) => {
-                const digits = text.replace(/\D/g, '');
-                if (digits.length <= 9) setRawAmount(digits); // Limit length if needed
-            }}
-            onFocus={() => setHasTouchedAmount(true)}
-            placeholder="0.00"
-            placeholderTextColor="#999"
-            keyboardType="numeric"
-          />
-          <Text style={styles.balance}>Balance: RM {balance.toFixed(2)}</Text>
-          {hasTouchedAmount && amountError ? (
-            <Text style={styles.error}>{amountError}</Text>
-          ) : null}
-
-          {/* Note */}
-          <Text style={styles.label}>Note (optional)</Text>
-          <TextInput
-            style={styles.input}
-            value={note}
-            onChangeText={setNote}
-            placeholder="e.g. Rent payment"
-            placeholderTextColor="#999"
-            maxLength={50}
-          />
-        </View>
-
-        {/* Continue Button */}
-        <View style={styles.footer}>
-          <TouchableOpacity
-            onPress={handleTransfer}
-            disabled={!isFormValid}
-            style={[
-              styles.button,
-              { backgroundColor: isFormValid ? COLORS.primary : '#ccc' },
-            ]}
-          >
-            <Text style={styles.buttonText}>Continue</Text>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        {isLoading ? (
+          <ActivityIndicator color="#0047AB" />
+        ) : (
+          <Text style={styles.secondaryButtonText}>Login</Text>
+        )}
+      </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  flex: { flex: 1 },
   container: {
     flex: 1,
+    backgroundColor: '#0047AB',
     padding: SPACING.l,
+    justifyContent: 'center',
   },
-  screenTitle: {
-    fontSize: 24,
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.l,
+  },
+  logoCircle: {
+    backgroundColor: '#fff',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#0047AB',
+  },
+  logoLabel: {
+    color: '#fff',
+    fontSize: 28,
+    fontWeight: 'bold',
+  },
+  title: {
+    fontSize: 28,
     fontWeight: 'bold',
     marginBottom: SPACING.l,
-    color: COLORS.text,
+    textAlign: 'center',
+    color: '#fff',
   },
   label: {
-    marginTop: SPACING.l,
-    marginBottom: SPACING.s,
     fontSize: FONT_SIZE.body,
-    color: '#666',
+    marginBottom: 4,
+    color: '#eee',
+  },
+  phoneContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.s,
+  },
+  countryCode: {
+    backgroundColor: '#fff',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  countryCodeText: {
+    fontSize: FONT_SIZE.body,
+    color: COLORS.text,
+  },
+  phoneInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    fontSize: FONT_SIZE.body,
+    color: COLORS.text,
+    backgroundColor: '#fff',
   },
   input: {
     borderBottomWidth: 1,
     borderColor: COLORS.border,
+    marginBottom: SPACING.l,
     paddingVertical: 12,
     fontSize: FONT_SIZE.body,
-    color: COLORS.text,
-  },
-  inputBold: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  balance: {
-    marginTop: SPACING.s,
-    fontSize: FONT_SIZE.body,
-    fontWeight: '500',
-    color: COLORS.success,
+    color: '#fff',
   },
   error: {
     color: 'red',
     fontSize: 14,
-    marginTop: 4,
+    marginBottom: SPACING.m,
   },
-  footer: {
-    padding: SPACING.l,
-    backgroundColor: COLORS.background,
-  },
-  button: {
+  buttonSecondary: {
     paddingVertical: 16,
     borderRadius: 100,
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+    backgroundColor: '#fff',
   },
-  buttonText: {
-    color: '#fff',
+  secondaryButtonText: {
+    color: '#0047AB',
     fontSize: FONT_SIZE.body,
     fontWeight: '600',
   },
