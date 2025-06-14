@@ -1,0 +1,16 @@
+[
+    {
+      "token": "fake-token-001",
+      "balance": 1234.56,
+      "interestEarned": 15.25,
+      "received": 50.0,
+      "spent": 98.2
+    },
+    {
+      "token": "fake-token-002",
+      "balance": 20000.0,
+      "interestEarned": 50.11,
+      "received": 2056.0,
+      "spent": 450.0
+    }
+  ]
