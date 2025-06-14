@@ -1,16 +1,19 @@
+import HeaderBackButton from '@/components/HeaderBackButton';
 import { useLoading } from '@/contexts/loadingContext';
 import { useProcessTransactionMutation } from '@/store/api/transactionApi';
 import { setTransferDetails } from '@/store/transferSlice';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
@@ -18,8 +21,8 @@ import { COLORS, FONT_SIZE, SPACING } from '../constants/theme';
 
 export default function Transfer() {
   const router = useRouter();
-  const { showLoading, hideLoading } = useLoading();
   const dispatch = useDispatch();
+  const { showLoading, hideLoading } = useLoading();
   const [processTransaction] = useProcessTransactionMutation();
   const [accountNumber, setAccountNumber] = useState('');
   const [amount, setAmount] = useState('');
@@ -74,22 +77,43 @@ export default function Transfer() {
     setHasTouchedAmount(true);
   
     if (accError || amtError) return;
-
-    try {
-      showLoading();
-      const res = await processTransaction({ amount: parseFloat(amount), accountNumber }).unwrap();
-      const generatedRefId = `REF${Date.now()}`;
-      dispatch(setTransferDetails({
-        referenceId: generatedRefId,
-        accountNumber,
-        amount,
-        note,
-        dateTime: new Date().toLocaleString(),
-      }));
   
-      router.replace('/payment-success');
-    } catch (apiError: any) {
-      router.replace({ pathname: '/payment-failed', params: { message: apiError?.data?.message || '' } });
+    showLoading();
+  
+    try {
+      const isAvailable = await LocalAuthentication.hasHardwareAsync();
+      const supportedTypes = await LocalAuthentication.supportedAuthenticationTypesAsync();
+  
+      if (!isAvailable || supportedTypes.length === 0) {
+        Alert.alert('Biometric not available', 'This device does not support Face ID or fingerprint.');
+        return;
+      }
+  
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Authenticate to complete transfer',
+        fallbackLabel: 'Use Passcode',
+        cancelLabel: 'Cancel',
+        disableDeviceFallback: false,
+      });
+
+      if (result.success) {
+        const generatedRefId = `REF${Date.now()}`;
+        try {
+          const res = await processTransaction({ amount: parseFloat(amount), accountNumber }).unwrap();
+      
+          dispatch(setTransferDetails({
+            referenceId: generatedRefId,
+            accountNumber,
+            amount,
+            note,
+            dateTime: new Date().toLocaleString(),
+          }));
+      
+          router.replace('/payment-success');
+        } catch (apiError: any) {
+          router.replace({ pathname: '/payment-failed', params: { message: apiError?.data?.message || '' } });
+        }
+      }
     } finally {
       hideLoading();
     }
@@ -105,6 +129,7 @@ export default function Transfer() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.container}>
+          <HeaderBackButton />
           {/* Title Header */}
           <Text style={styles.screenTitle}>Payment Transfer</Text>
 
@@ -130,9 +155,10 @@ export default function Transfer() {
           <Text style={styles.label}>Amount</Text>
           <TextInput
             style={[styles.input, styles.inputBold]}
-            value={amount}
+            value={formatAmount(rawAmount)}
             onChangeText={(text) => {
-              if (/^\d*\.?\d{0,2}$/.test(text)) setAmount(text);
+                const digits = text.replace(/\D/g, '');
+                if (digits.length <= 9) setRawAmount(digits); // Limit length if needed
             }}
             onFocus={() => setHasTouchedAmount(true)}
             placeholder="0.00"
