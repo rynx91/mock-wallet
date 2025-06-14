@@ -1,11 +1,17 @@
+import { RootState } from '@/store';
+import { sharePDF } from '@/utils/pdfGenerator';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSelector } from 'react-redux';
 import { COLORS, FONT_SIZE, SPACING } from '../constants/theme';
 
 const PaymentSuccess = () => {
   const router = useRouter();
+  const { referenceId, accountNumber, amount, note, dateTime } = useSelector(
+    (state: RootState) => state.transfer
+  );
 
   return (
     <View style={styles.container}>
@@ -14,14 +20,32 @@ const PaymentSuccess = () => {
 
       <View style={styles.infoRow}>
         <Text style={styles.label}>Reference ID: </Text>
-        <Text style={styles.value}>xxxxx</Text>
-      </View>
-
-        <View style={styles.infoRow}>
-            <Text style={styles.label}>Date & Time: </Text>
-            <Text style={styles.value}>xxxxxx</Text>
+        <Text style={styles.value}>{referenceId}</Text>
         </View>
 
+    <View style={styles.infoRow}>
+        <Text style={styles.label}>Date & Time: </Text>
+        <Text style={styles.value}>{dateTime}</Text>
+    </View>
+
+
+      <View style={styles.buttons}>
+        <TouchableOpacity
+          onPress={() =>
+            sharePDF({ referenceId, accountNumber, amount, note, dateTime })
+          }
+          style={styles.secondaryButton}
+        >
+          <Text style={styles.secondaryText}>Share Receipt</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => router.replace('/')}
+          style={styles.primaryButton}
+        >
+          <Text style={styles.primaryText}>Done</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -53,6 +77,36 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.body,
     fontWeight: '500',
     color: COLORS.text,
+  },
+  buttons: {
+    marginTop: SPACING.l,
+    width: '100%',
+    gap: SPACING.m,
+  },
+  primaryButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 16,
+    borderRadius: 100,
+    alignItems: 'center',
+  },
+  primaryText: {
+    color: '#fff',
+    fontSize: FONT_SIZE.body,
+    fontWeight: '600',
+  },
+  secondaryButton: {
+    marginTop: SPACING.m,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    paddingVertical: 16,
+    borderRadius: 100,
+    alignItems: 'center',
+  },
+  secondaryText: {
+    color: COLORS.primary,
+    fontSize: FONT_SIZE.body,
+    fontWeight: '600',
   },
   infoRow: {
     flexDirection: 'row',
