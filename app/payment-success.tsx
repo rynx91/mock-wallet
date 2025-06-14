@@ -40,7 +40,7 @@ const PaymentSuccess = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => router.replace('/')}
+          onPress={() => router.replace('/transfer')}
           style={styles.primaryButton}
         >
           <Text style={styles.primaryText}>Done</Text>

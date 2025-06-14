@@ -18,7 +18,7 @@ const PaymentFailed = () => {
 
       <View style={styles.buttonContainer}>
         <TouchableOpacity
-          onPress={() => router.replace('/')}
+          onPress={() => router.replace('/transfer')}
           style={styles.button}
         >
           <Text style={styles.buttonText}>Try Again</Text>
