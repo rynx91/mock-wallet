@@ -1,5 +1,30 @@
 [
-  { "code": "MBB", "name": "Maybank", "accountLength": 12 },
-  { "code": "CIMB", "name": "CIMB Bank", "accountLength": 10 },
-  { "code": "PBB", "name": "Public Bank", "accountLength": 14 }
+  {
+    "code": "MBB",
+    "name": "Maybank",
+    "accountLength": 12,
+    "style": {
+      "bg": "#FFD700",
+      "text": "#000"
+    }
+  },
+  {
+    "code": "CIMB",
+    "name": "CIMB Bank",
+    "accountLength": 10,
+    "style": {
+      "bg": "#D71920",
+      "text": "#fff"
+    }
+  },
+  {
+    "code": "PBB",
+    "name": "Public Bank",
+    "accountLength": 14,
+    "style": {
+      "bg": "#fff",
+      "text": "#D71920",
+      "border": "#D71920"
+    }
+  }
 ]
