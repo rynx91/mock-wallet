@@ -1,0 +1,5 @@
+[
+  { "code": "MBB", "name": "Maybank", "accountLength": 12 },
+  { "code": "CIMB", "name": "CIMB Bank", "accountLength": 10 },
+  { "code": "PBB", "name": "Public Bank", "accountLength": 14 }
+]

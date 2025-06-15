@@ -1,0 +1,14 @@
+[
+  {
+    "token": "fake-token-001",
+    "items": [
+      {
+        "name": "Ahmad",
+        "type": "account",
+        "accountNumber": "111111111111",
+        "bankCode": "CIMB",
+        "bankName": "CIMB"
+      }
+    ]
+  }
+]

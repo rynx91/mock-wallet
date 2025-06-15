@@ -1,0 +1,19 @@
+[
+  {
+    "token": "fake-token-001",
+    "items": [
+      {
+        "name": "John Doe",
+        "type": "account",
+        "accountNumber": "123456789012",
+        "bankCode": "MBB",
+        "bankName": "Maybank"
+      },
+      {
+        "name": "Alice",
+        "type": "mobile",
+        "phone": "60123456789"
+      }
+    ]
+  }
+]
