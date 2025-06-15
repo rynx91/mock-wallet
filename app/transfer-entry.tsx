@@ -1,6 +1,9 @@
 import HeaderBackButton from '@/components/HeaderBackButton';
 import { AccountDetails } from '@/model/transfer.type';
+import { RootState } from '@/store';
 import { useGetFavouriteTransfersQuery, useGetRecentTransfersQuery } from '@/store/api/transferApi';
+import { setFavourite } from '@/store/favouriteSlice';
+import { setRecentTransfers } from '@/store/recentTransferSlice';
 import { clearTransferDetails, setTransferDetails } from '@/store/transferSlice';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -14,19 +17,39 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { COLORS, FONT_SIZE, SPACING } from '../constants/theme';
 
 export default function TransferEntry() {
   const router = useRouter();
   const dispatch = useDispatch();
-  const { data: recents = [] } = useGetRecentTransfersQuery();
-  const { data: favourites = [] } = useGetFavouriteTransfersQuery();
+  const recents = useSelector((state: RootState) => state.recentTransfer);
+  const favourites = useSelector((state: RootState) => state.favourite);
+
+  const {
+    data: recentData,
+    isSuccess: recentSuccess,
+  } = useGetRecentTransfersQuery(undefined, { skip: recents.length > 0 });
+
+  const {
+    data: favouriteData,
+    isSuccess: favouriteSuccess,
+  } = useGetFavouriteTransfersQuery(undefined, { skip: favourites.length > 0 });
+
   const [selectedTab, setSelectedTab] = useState<'favourites' | 'recents'>('favourites');
 
   useEffect(() => {
     dispatch(clearTransferDetails());
   }, []);
+
+  useEffect(() => {
+    if (recentSuccess && recentData) {
+      dispatch(setRecentTransfers(recentData));
+    }
+    if (favouriteSuccess && favouriteData) {
+      dispatch(setFavourite(favouriteData));
+    }
+  }, [recentSuccess, favouriteSuccess, recentData, favouriteData, dispatch]);
 
   const handleSelect = (item: AccountDetails) => {
     const selectedBank = {
