@@ -1,9 +1,11 @@
 import { useLoading } from '@/contexts/loadingContext';
 import { useLogout } from '@/hooks/useLogout';
+import { RootState } from '@/store';
+import { setAccount } from '@/store/accountSlice';
 import { useGetAccountInfoQuery } from '@/store/api/accountApi';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Platform,
@@ -13,7 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { FONT_SIZE, SPACING } from '../constants/theme';
 
 export default function Home() {
@@ -22,7 +24,18 @@ export default function Home() {
   const [showBalance, setShowBalance] = useState(true);
   const { showLoading, hideLoading } = useLoading();
   const router = useRouter();
-  const { data: accountInfo } = useGetAccountInfoQuery();
+
+  const accountInfo = useSelector((state: RootState) => state.account);
+
+  const { data, isSuccess } = useGetAccountInfoQuery(undefined, {
+    skip: accountInfo.balance !== 0,
+  });
+
+  useEffect(() => {
+    if (isSuccess && data) {
+      dispatch(setAccount(data));
+    }
+  }, [isSuccess, data, dispatch]);
 
   const confirmLogout = () => {
     if (Platform.OS === 'web') {
@@ -59,7 +72,7 @@ export default function Home() {
       onPress: () => router.push('/transfer-entry'),
     },
   ], [router]);
-  
+
   const getFirstOfMonth = () => {
     const now = new Date();
     return `since ${now.toLocaleString('default', {
@@ -84,7 +97,6 @@ export default function Home() {
       value: `RM ${accountInfo?.spent.toFixed(2) ?? '0.00'} ${getFirstOfMonth()}`,
     },
   ], [accountInfo]);
-  
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
