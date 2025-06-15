@@ -5,13 +5,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
-    Alert,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { FONT_SIZE, SPACING } from '../constants/theme';
@@ -56,7 +56,7 @@ export default function Home() {
     {
       icon: 'send',
       label: 'Send Money',
-      onPress: () => router.push('/transfer'),
+      onPress: () => router.push('/transfer-entry'),
     },
   ], [router]);
   
