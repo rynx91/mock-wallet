@@ -1,53 +1,58 @@
 import HeaderBackButton from '@/components/HeaderBackButton';
 import { useLoading } from '@/contexts/loadingContext';
-import { useProcessTransactionMutation } from '@/store/api/transactionApi';
+import { RootState } from '@/store';
+import { deductBalance } from '@/store/accountSlice';
+import { useProcessTransactionMutation } from '@/store/api/transferApi';
+import { addRecentTransfer } from '@/store/recentTransferSlice';
 import { setTransferDetails } from '@/store/transferSlice';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { COLORS, FONT_SIZE, SPACING } from '../constants/theme';
 
 export default function Transfer() {
   const router = useRouter();
   const dispatch = useDispatch();
+  const { method, bank, name, accountNumber } = useSelector(
+    (state: RootState) => state.transfer
+  );
   const { showLoading, hideLoading } = useLoading();
   const [processTransaction] = useProcessTransactionMutation();
-  const [accountNumber, setAccountNumber] = useState('');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
-  const [balance] = useState(1000);
-
-  const [accountNumberError, setAccountNumberError] = useState('');
   const [amountError, setAmountError] = useState('');
-
-  const [hasTouchedAccountNumber, setHasTouchedAccountNumber] = useState(false);
   const [hasTouchedAmount, setHasTouchedAmount] = useState(false);
   const [rawAmount, setRawAmount] = useState('');
+  const accountInfo = useSelector((state: RootState) => state.account);
+  const [balance, setBalance] = useState(0);
+
+  useEffect(() => {
+    if (accountInfo?.balance != null) {
+      setBalance(accountInfo.balance);
+    }
+  }, [accountInfo]);
 
   useEffect(() => {
     const formatted = formatAmount(rawAmount);
     setAmount(formatted);
-    setAccountNumberError(validateAccountNumber(accountNumber));
     setAmountError(validateAmount(formatted));
-  }, [accountNumber, rawAmount]);
+  }, [rawAmount]);
 
-  const validateAccountNumber = (value: string) => {
-    if (!value) return 'Account number is required.';
-    if (value.length !== 12) return 'Account number must be exactly 12 digits.';
-    return '';
-  };
+  useEffect(() => {
+    setAmountError(validateAmount(amount));
+  }, [amount]);
 
   const validateAmount = (value: string) => {
     const number = parseFloat(value);
@@ -57,38 +62,29 @@ export default function Transfer() {
     return '';
   };
 
-  useEffect(() => {
-    setAccountNumberError(validateAccountNumber(accountNumber));
-    setAmountError(validateAmount(amount));
-  }, [accountNumber, amount]);
-
   const formatAmount = (val: string) => {
     const number = parseInt(val || '0', 10);
     return (number / 100).toFixed(2);
   };
 
   const handleTransfer = async () => {
-    const accError = validateAccountNumber(accountNumber);
     const amtError = validateAmount(amount);
-  
-    setAccountNumberError(accError);
     setAmountError(amtError);
-    setHasTouchedAccountNumber(true);
     setHasTouchedAmount(true);
-  
-    if (accError || amtError) return;
-  
+    if (amtError) return;
+
     showLoading();
-  
+
     try {
       const isAvailable = await LocalAuthentication.hasHardwareAsync();
       const supportedTypes = await LocalAuthentication.supportedAuthenticationTypesAsync();
-  
+
       if (!isAvailable || supportedTypes.length === 0) {
         Alert.alert('Biometric not available', 'This device does not support Face ID or fingerprint.');
+        hideLoading();
         return;
       }
-  
+
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Authenticate to complete transfer',
         fallbackLabel: 'Use Passcode',
@@ -96,34 +92,53 @@ export default function Transfer() {
         disableDeviceFallback: false,
       });
 
-      if (result.success) {
-        const generatedRefId = `REF${Date.now()}`;
-        try {
-          const res = await processTransaction({ amount: parseFloat(amount), accountNumber }).unwrap();
-      
-          dispatch(setTransferDetails({
-            referenceId: generatedRefId,
-            accountNumber,
-            'abc',
-            amount,
-            note,
-            dateTime: new Date().toLocaleString(),
-            method: method,
-            bank: bank,
-          }));
-      
-          router.replace('/payment-success');
-        } catch (apiError: any) {
-          router.replace({ pathname: '/payment-failed', params: { message: apiError?.data?.message || '' } });
-        }
+      if (!result.success) {
+        router.replace({ pathname: '/payment-failed', params: { message: 'Authentication failed' } });
+        return;
       }
+
+      const generatedRefId = `REF${Date.now()}`;
+      const res = await processTransaction({
+        amount: parseFloat(amount),
+        accountNumber,
+      }).unwrap();
+
+      dispatch(
+        setTransferDetails({
+          referenceId: generatedRefId,
+          accountNumber,
+          name,
+          amount,
+          note,
+          dateTime: new Date().toLocaleString(),
+          method: method,
+          bank: bank,
+        })
+      );
+      dispatch(deductBalance(parseFloat(amount)));
+      dispatch(
+        addRecentTransfer({
+          name,
+          type: method === 'mobile' ? 'mobile' : 'account',
+          phone: method === 'mobile' ? accountNumber : undefined,
+          accountNumber: method === 'account' ? accountNumber : undefined,
+          bankCode: bank?.code,
+          bankName: bank?.name,
+        })
+      );
+
+      router.replace('/payment-success');
+    } catch (apiError: any) {
+      router.replace({
+        pathname: '/payment-failed',
+        params: { message: apiError?.data?.message || 'Transaction failed' },
+      });
     } finally {
       hideLoading();
     }
   };
 
-  const isFormValid =
-    !validateAccountNumber(accountNumber) && !validateAmount(amount);
+  const isFormValid = !validateAmount(amount);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -133,47 +148,44 @@ export default function Transfer() {
       >
         <View style={styles.container}>
           <HeaderBackButton />
-          {/* Title Header */}
           <Text style={styles.screenTitle}>Payment Transfer</Text>
 
-          {/* Account Number */}
-          <Text style={styles.label}>Account Number</Text>
-          <TextInput
-            style={[styles.input, styles.inputBold]}
-            value={accountNumber}
-            onChangeText={(text) => {
-              if (/^\d*$/.test(text)) setAccountNumber(text);
-            }}
-            onFocus={() => setHasTouchedAccountNumber(true)}
-            placeholder="Enter account number"
-            placeholderTextColor="#999"
-            keyboardType="numeric"
-            maxLength={12}
-          />
-          {hasTouchedAccountNumber && accountNumberError ? (
-            <Text style={styles.error}>{accountNumberError}</Text>
-          ) : null}
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{ fontSize: FONT_SIZE.body, color: COLORS.text }}>Recipient</Text>
+            <Text style={{ fontSize: 22, fontWeight: 'bold', color: COLORS.text }}>{name}</Text>
+            {method === 'account' ? (
+              <Text style={{ fontSize: 18, color: COLORS.text }}>
+                {bank?.name} • {accountNumber}
+              </Text>
+            ) : (
+              <Text style={{ fontSize: 18, color: COLORS.text }}>{accountNumber}</Text>
+            )}
+          </View>
 
-          {/* Amount */}
           <Text style={styles.label}>Amount</Text>
           <TextInput
             style={[styles.input, styles.inputBold]}
             value={formatAmount(rawAmount)}
             onChangeText={(text) => {
-                const digits = text.replace(/\D/g, '');
-                if (digits.length <= 9) setRawAmount(digits); // Limit length if needed
+              const digits = text.replace(/\D/g, '');
+              if (digits.length <= 9) setRawAmount(digits);
             }}
             onFocus={() => setHasTouchedAmount(true)}
             placeholder="0.00"
             placeholderTextColor="#999"
             keyboardType="numeric"
           />
-          <Text style={styles.balance}>Balance: RM {balance.toFixed(2)}</Text>
+          <Text style={styles.balance}>
+            Balance: RM{' '}
+            {balance?.toLocaleString('en-MY', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }) ?? '0.00'}
+          </Text>
           {hasTouchedAmount && amountError ? (
             <Text style={styles.error}>{amountError}</Text>
           ) : null}
 
-          {/* Note */}
           <Text style={styles.label}>Note (optional)</Text>
           <TextInput
             style={styles.input}
@@ -185,7 +197,6 @@ export default function Transfer() {
           />
         </View>
 
-        {/* Continue Button */}
         <View style={styles.footer}>
           <TouchableOpacity
             onPress={handleTransfer}
