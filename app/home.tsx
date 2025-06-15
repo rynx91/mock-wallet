@@ -1,10 +1,9 @@
 import { useLoading } from '@/contexts/loadingContext';
-import { accountApi, useGetAccountInfoQuery } from '@/store/api/accountApi';
-import { authApi } from '@/store/api/authApi';
+import { useLogout } from '@/hooks/useLogout';
+import { useGetAccountInfoQuery } from '@/store/api/accountApi';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     Alert,
     Platform,
@@ -18,6 +17,7 @@ import { useDispatch } from 'react-redux';
 import { FONT_SIZE, SPACING } from '../constants/theme';
 
 export default function Home() {
+  const logout = useLogout();
   const dispatch = useDispatch();
   const [showBalance, setShowBalance] = useState(true);
   const { showLoading, hideLoading } = useLoading();
@@ -27,29 +27,20 @@ export default function Home() {
   const confirmLogout = () => {
     if (Platform.OS === 'web') {
       const confirmed = window.confirm('Are you sure you want to logout?');
-      if (confirmed) handleLogout();
+      if (confirmed) logout();
     } else {
       Alert.alert(
         'Confirm Logout',
         'Are you sure you want to logout?',
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Logout', style: 'destructive', onPress: handleLogout },
+          { text: 'Logout', style: 'destructive', onPress: logout },
         ]
       );
     }
   };
 
-  const handleLogout = async () => {
-    showLoading();
-    await AsyncStorage.multiRemove(['authToken', 'syncedContacts']);
-    dispatch(authApi.util.resetApiState());
-    dispatch(accountApi.util.resetApiState());
-    router.replace('/');
-    hideLoading();
-  };
-
-  const actions = [
+  const actions = useMemo(() => [
     {
       icon: 'add-circle',
       label: 'Add Money',
@@ -67,8 +58,8 @@ export default function Home() {
       label: 'Send Money',
       onPress: () => router.push('/transfer'),
     },
-  ];
-
+  ], [router]);
+  
   const getFirstOfMonth = () => {
     const now = new Date();
     return `since ${now.toLocaleString('default', {
@@ -76,7 +67,7 @@ export default function Home() {
     })} 1`;
   };
 
-  const insights = [
+  const insights = useMemo(() => [
     {
       icon: 'trending-up',
       label: 'Interest earned',
@@ -92,7 +83,8 @@ export default function Home() {
       label: 'You spent',
       value: `RM ${accountInfo?.spent.toFixed(2) ?? '0.00'} ${getFirstOfMonth()}`,
     },
-  ];
+  ], [accountInfo]);
+  
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
