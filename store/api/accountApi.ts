@@ -18,7 +18,6 @@ export const accountApi = createApi({
     }
 
     const userAccount = mockAccountData.find((acc: any) => acc.token === token);
-console.log(userAccount)
     if (userAccount) {
       return { data: userAccount };
     } else {

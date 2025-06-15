@@ -2,17 +2,17 @@ import { useLogout } from '@/hooks/useLogout';
 import { usePathname } from 'expo-router';
 import React, { ReactNode, useEffect, useRef, useState } from 'react';
 import {
-    AppState,
-    AppStateStatus,
-    Keyboard,
-    Modal,
-    PanResponder,
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View
+  AppState,
+  AppStateStatus,
+  Keyboard,
+  Modal,
+  PanResponder,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View
 } from 'react-native';
 
 type Props = {
@@ -139,7 +139,6 @@ export default function InactivityHandler({ children }: Props) {
     };
   }, [modalVisible, shouldSkipTimer]);
 
-  // 👇 Improved pan responder to detect more gestures
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => {
       resetTimer();
