@@ -2,6 +2,7 @@ import HeaderBackButton from '@/components/HeaderBackButton';
 import { COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import { RootState } from '@/store';
 import { useGetBankListQuery, useGetFavouriteTransfersQuery } from '@/store/api/transferApi';
+import { addFavourite, removeFavourite } from '@/store/favouriteSlice';
 import { setTransferDetails } from '@/store/transferSlice';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -38,12 +39,15 @@ export default function TransferAccount() {
   const [selectedBank, setSelectedBank] = useState(saved.bank || null);
   const [isFavourite, setIsFavourite] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [recipientName, setRecipientName] = useState('');
+  
 
   useEffect(() => {
     if (selectedBank && accountNumber.length === selectedBank.accountLength) {
       const fav = favourites.find(
         (fav: { accountNumber: string; bank: string; }) => fav.accountNumber === accountNumber && fav.bank === selectedBank.name
       );
+      setRecipientName(fav?.name || 'John Doe');
       setIsFavourite(!!fav);
     } else {
       setIsFavourite(false);
@@ -57,10 +61,6 @@ export default function TransferAccount() {
 
   const handleNext = () => {
     if(selectedBank && isFormValid) {
-      const fav = favourites.find((f: { accountNumber: string; bank: string; }) =>
-        f.accountNumber === accountNumber && f.bank === selectedBank.name
-      );
-      const recipientName = fav?.name || 'John Doe';
       dispatch(
         setTransferDetails({
           referenceId: '',
@@ -106,7 +106,21 @@ export default function TransferAccount() {
                 maxLength={selectedBank?.accountLength || 12}
               />
               {selectedBank && accountValid && (
-                <TouchableOpacity onPress={() => setIsFavourite(!isFavourite)}>
+                <TouchableOpacity onPress={() => {
+                  const newValue = !isFavourite;
+                  if (!!newValue) {
+                    dispatch(addFavourite({
+                      name: recipientName,
+                      type: 'account',
+                      accountNumber,
+                      bankCode: selectedBank.code,
+                      bankName: selectedBank.name,
+                    }));
+                  } else {
+                    dispatch(removeFavourite({ type: 'account', accountNumber }));
+                  }
+                  setIsFavourite(newValue)
+                }}>
                   <Text style={{ fontSize: 20, marginLeft: 12, color: isFavourite ? COLORS.primary : '#ccc'}}>
                     {isFavourite ? '★' : '☆'}
                   </Text>

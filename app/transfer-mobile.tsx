@@ -3,6 +3,7 @@ import { COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import useContacts from '@/hooks/useContacts';
 import { RootState } from '@/store';
 import { useGetFavouriteTransfersQuery } from '@/store/api/transferApi';
+import { addFavourite, removeFavourite } from '@/store/favouriteSlice';
 import { setTransferDetails } from '@/store/transferSlice';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -108,7 +109,19 @@ export default function TransferMobile() {
               }}
             />
             {isValid && (
-              <TouchableOpacity onPress={() => setIsFavourite(!isFavourite)}>
+              <TouchableOpacity onPress={() => {
+                const newValue = !isFavourite;
+                  if (!!newValue) {
+                    dispatch(addFavourite({
+                      name: name,
+                      type: 'mobile',
+                      phone: phone,
+                    }));
+                  } else {
+                    dispatch(removeFavourite({ type: 'mobile', phone }));
+                  }
+                  setIsFavourite(newValue)
+              }}>
                 <Text style={[styles.favIcon, { color: isFavourite ? COLORS.primary : '#ccc' }]}>
                   {isFavourite ? '★' : '☆'}
                 </Text>
