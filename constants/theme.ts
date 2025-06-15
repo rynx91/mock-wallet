@@ -11,12 +11,12 @@ export const SPACING = {
     s: 8,
     m: 16,
     l: 24,
-    xl: 32,
 };
 
 export const FONT_SIZE = {
     body: 16,
     label: 14,
     title: 24,
+    subTitle: 18
 };
   

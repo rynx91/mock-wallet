@@ -104,9 +104,12 @@ export default function Transfer() {
           dispatch(setTransferDetails({
             referenceId: generatedRefId,
             accountNumber,
+            'abc',
             amount,
             note,
             dateTime: new Date().toLocaleString(),
+            method: method,
+            bank: bank,
           }));
       
           router.replace('/payment-success');
