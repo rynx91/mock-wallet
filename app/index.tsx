@@ -1,7 +1,7 @@
 import { useLoading } from '@/contexts/loadingContext';
-
 import { useLoginMutation } from '@/store/api/authApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -24,6 +24,35 @@ export default function Login() {
 
   const [login, { isLoading }] = useLoginMutation();
 
+  const runBiometricCheck = async () => {
+    const alreadyChecked = await AsyncStorage.getItem('biometricChecked');
+    if (alreadyChecked) return;
+
+    const isAvailable = await LocalAuthentication.hasHardwareAsync();
+    const supportedTypes = await LocalAuthentication.supportedAuthenticationTypesAsync();
+
+    if (!isAvailable || supportedTypes.length === 0) {
+      Alert.alert('Biometric not available', 'This device does not support Face ID or fingerprint.');
+      return;
+    }
+
+    const result = await LocalAuthentication.authenticateAsync({
+      promptMessage: 'Authenticate to complete transfer',
+      fallbackLabel: 'Use Passcode',
+      cancelLabel: 'Cancel',
+      disableDeviceFallback: false,
+    });
+
+    if (!result.success) {
+      Alert.alert('Authentication Failed', 'Invalid Login.');
+      return false;
+    } else {
+      await AsyncStorage.setItem('biometricChecked', 'true');
+      return true;
+    }
+    
+  };
+
   const validatePhone = (value: string) => {
     if (!value) return 'Phone number is required.';
     if (!/^\d{9,10}$/.test(value)) return 'Invalid Malaysian phone number.';
@@ -41,9 +70,12 @@ export default function Login() {
       showLoading();
       await sleep(1000);
       const response = await login({ phone, pin }).unwrap();
-      await AsyncStorage.setItem('authToken', response.token);
-      await AsyncStorage.setItem('userPhone', phone);
-      router.replace('/home');
+      const biometricResult = await runBiometricCheck();
+      if(biometricResult) {
+        await AsyncStorage.setItem('authToken', response.token);
+        await AsyncStorage.setItem('userPhone', phone);
+        router.replace('/home');
+      }
     } catch (e: any) {
       Alert.alert('Login Failed', e?.data?.message || 'Invalid login.');
     } finally {
