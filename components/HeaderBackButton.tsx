@@ -1,25 +1,21 @@
-import { Ionicons } from '@expo/vector-icons';
-import { usePathname, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import React from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
-import { COLORS, SPACING } from '../constants/theme';
+import { TouchableOpacity } from 'react-native';
+import Icon from 'react-native-vector-icons/Feather';
 
-export default function HeaderBackButton() {
+type Props = {
+  onPress?: () => void;
+};
+
+export default function HeaderBackButton({ onPress }: Props) {
   const router = useRouter();
-  const pathname = usePathname();
-
-  // Don't render on login page
-  if (pathname === '/login') return null;
 
   return (
-    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-      <Ionicons name="chevron-back" size={24} color={COLORS.text} />
+    <TouchableOpacity
+      onPress={onPress || router.back}
+      style={{ paddingVertical: 8 }}
+    >
+      <Icon name="chevron-left" size={24} />
     </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({
-  backButton: {
-    paddingVertical: SPACING.l,
-  },
-});
