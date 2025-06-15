@@ -33,7 +33,7 @@ export default function useContacts() {
     } else if (digits.startsWith('0')) {
       return digits;
     }
-    return ''; // ignore invalid
+    return '';
   };
 
   const syncContacts = async () => {
