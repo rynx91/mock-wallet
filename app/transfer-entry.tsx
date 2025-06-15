@@ -75,7 +75,7 @@ export default function TransferEntry() {
             <View style={styles.optionContainer}>
               <TouchableOpacity
                 style={styles.iconButton}
-                onPress={() => router.push('/transfer')}
+                onPress={() => router.push('/transfer-account')}
               >
                 <View style={styles.iconCircle}>
                   <Ionicons name="card-outline" size={24} color="#fff" />
@@ -85,7 +85,7 @@ export default function TransferEntry() {
 
               <TouchableOpacity
                 style={styles.iconButton}
-                onPress={() => router.push('/transfer')}
+                onPress={() => router.push('/transfer-mobile')}
               >
                 <View style={styles.iconCircle}>
                   <Ionicons name="call-outline" size={24} color="#fff" />
