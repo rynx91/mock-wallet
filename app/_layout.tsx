@@ -1,4 +1,5 @@
 import LoadingOverlay from '@/components/LoadingOverlay';
+import InactivityHandler from '@/contexts/inactivityHandler';
 import { LoadingProvider } from '@/contexts/loadingContext';
 import { store } from '@/store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -31,14 +32,16 @@ export default function RootLayout() {
     checkAuth();
   }, [pathname]);
 
-  if (isCheckingAuth) return null; // Or show a loading spinner
+  if (isCheckingAuth) return null;
 
   return (
     <Provider store={store}>
-      <LoadingProvider>
-        <Slot />
-        <LoadingOverlay />
-      </LoadingProvider>
+      <InactivityHandler>
+        <LoadingProvider>
+          <Slot />
+          <LoadingOverlay />
+        </LoadingProvider>
+      </InactivityHandler>
     </Provider>
   );
 }
