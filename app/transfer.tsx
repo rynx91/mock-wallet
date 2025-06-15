@@ -206,7 +206,7 @@ export default function Transfer() {
               { backgroundColor: isFormValid ? COLORS.primary : '#ccc' },
             ]}
           >
-            <Text style={styles.buttonText}>Continue</Text>
+            <Text style={styles.buttonText}>Confirm Transfer</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
