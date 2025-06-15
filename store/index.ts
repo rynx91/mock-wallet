@@ -2,6 +2,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { accountApi } from './api/accountApi';
 import { authApi } from './api/authApi';
 import { transactionApi } from './api/transactionApi';
+import { transferApi } from './api/transferApi';
 import transferReducer from './transferSlice';
 
 export const store = configureStore({
@@ -10,12 +11,14 @@ export const store = configureStore({
       [transactionApi.reducerPath]: transactionApi.reducer,
       [authApi.reducerPath]: authApi.reducer,
       [accountApi.reducerPath]: accountApi.reducer,
+      [transferApi.reducerPath]: transferApi.reducer,
     },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware().concat(
         transactionApi.middleware,
         authApi.middleware,
-        accountApi.middleware
+        accountApi.middleware,
+        transferApi.middleware
       ),
   });
 
